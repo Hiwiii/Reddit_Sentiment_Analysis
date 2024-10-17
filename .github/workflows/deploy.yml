@@ -49,4 +49,4 @@ jobs:
           cd server
           pip install awsebcli  # Install Elastic Beanstalk CLI
           eb init --region $AWS_REGION --platform "Python 3.9"  # Initialize the Elastic Beanstalk environment
-          eb deploy  # Deploy to Elastic Beanstalk
+          eb deploy RedditSentimentAnalysisProject-env  # Deploy to the specified environment
