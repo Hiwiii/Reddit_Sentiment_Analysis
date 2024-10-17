@@ -1,0 +1,35 @@
+0 verbose cli C:\Program Files\nodejs\node.exe C:\Users\Hiwot\AppData\Roaming\npm\node_modules\npm\bin\npm-cli.js
+1 info using npm@10.8.0
+2 info using node@v21.6.2
+3 silly config load:file:C:\Users\Hiwot\AppData\Roaming\npm\node_modules\npm\npmrc
+4 silly config load:file:C:\Users\Hiwot\OneDrive\MSC Data Management\Courses\3rd Semester\DAC-P\Reddit_Sentiment_Analysis\.npmrc
+5 silly config load:file:C:\Users\Hiwot\.npmrc
+6 silly config load:file:C:\Users\Hiwot\AppData\Roaming\npm\etc\npmrc
+7 verbose title npm run dev
+8 verbose argv "run" "dev"
+9 verbose logfile logs-max:10 dir:C:\Users\Hiwot\OneDrive\MSC Data Management\Courses\3rd Semester\DAC-P\Reddit_Sentiment_Analysis\tmpnodejsnpm-cache\_logs\2024-10-17T10_30_45_039Z-
+10 verbose logfile C:\Users\Hiwot\OneDrive\MSC Data Management\Courses\3rd Semester\DAC-P\Reddit_Sentiment_Analysis\tmpnodejsnpm-cache\_logs\2024-10-17T10_30_45_039Z-debug-0.log
+11 silly logfile done cleaning log files
+12 verbose stack Error: Could not read package.json: Error: ENOENT: no such file or directory, open 'C:\Users\Hiwot\OneDrive\MSC Data Management\Courses\3rd Semester\DAC-P\Reddit_Sentiment_Analysis\package.json'
+12 verbose stack     at async open (node:internal/fs/promises:633:25)
+12 verbose stack     at async readFile (node:internal/fs/promises:1242:14)
+12 verbose stack     at async PackageJson.load (C:\Users\Hiwot\AppData\Roaming\npm\node_modules\npm\node_modules\@npmcli\package-json\lib\index.js:129:31)
+12 verbose stack     at async PackageJson.normalize (C:\Users\Hiwot\AppData\Roaming\npm\node_modules\npm\node_modules\@npmcli\package-json\lib\index.js:115:5)
+12 verbose stack     at async #run (C:\Users\Hiwot\AppData\Roaming\npm\node_modules\npm\lib\commands\run-script.js:85:13)
+12 verbose stack     at async RunScript.exec (C:\Users\Hiwot\AppData\Roaming\npm\node_modules\npm\lib\commands\run-script.js:39:7)
+12 verbose stack     at async Npm.exec (C:\Users\Hiwot\AppData\Roaming\npm\node_modules\npm\lib\npm.js:207:9)
+12 verbose stack     at async module.exports (C:\Users\Hiwot\AppData\Roaming\npm\node_modules\npm\lib\cli\entry.js:74:5)
+13 error code ENOENT
+14 error syscall open
+15 error path C:\Users\Hiwot\OneDrive\MSC Data Management\Courses\3rd Semester\DAC-P\Reddit_Sentiment_Analysis\package.json
+16 error errno -4058
+17 error enoent Could not read package.json: Error: ENOENT: no such file or directory, open 'C:\Users\Hiwot\OneDrive\MSC Data Management\Courses\3rd Semester\DAC-P\Reddit_Sentiment_Analysis\package.json'
+18 error enoent This is related to npm not being able to find a file.
+18 error enoent
+19 verbose cwd C:\Users\Hiwot\OneDrive\MSC Data Management\Courses\3rd Semester\DAC-P\Reddit_Sentiment_Analysis
+20 verbose os Windows_NT 10.0.22631
+21 verbose node v21.6.2
+22 verbose npm  v10.8.0
+23 verbose exit -4058
+24 verbose code -4058
+25 error A complete log of this run can be found in: C:\Users\Hiwot\OneDrive\MSC Data Management\Courses\3rd Semester\DAC-P\Reddit_Sentiment_Analysis\tmpnodejsnpm-cache\_logs\2024-10-17T10_30_45_039Z-debug-0.log
