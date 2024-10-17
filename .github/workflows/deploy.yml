@@ -17,7 +17,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v2
         with:
-          python-version: '3.12'
+          python-version: '3.9'
 
       - name: Install backend dependencies
         run: |
@@ -48,5 +48,5 @@ jobs:
         run: |
           cd server
           pip install awsebcli  # Install Elastic Beanstalk CLI
-          eb init --region $AWS_REGION --platform "Python 3.7"  # Initialize the Elastic Beanstalk environment
+          eb init --region $AWS_REGION --platform "Python 3.9"  # Initialize the Elastic Beanstalk environment
           eb deploy  # Deploy to Elastic Beanstalk
