@@ -10,7 +10,6 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Checkout the code
       - name: Checkout code
         uses: actions/checkout@v2
 
@@ -20,7 +19,6 @@ jobs:
         with:
           python-version: '3.9'
 
-      # Install backend dependencies
       - name: Install backend dependencies
         run: |
           cd server
@@ -35,7 +33,7 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_PASSWORD }}
 
-      # Build and Push Backend Docker Image
+      # Build and Push Backend Image to DockerHub
       - name: Build and Push Backend Docker Image
         run: |
           docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/reddit-sentiment-backend:latest ./server
@@ -46,13 +44,28 @@ jobs:
         run: |
           pip install awsebcli
 
-      # Deploy Application
-      - name: Deploy Application
+      # Create a New Application Version
+      - name: Create a New Application Version
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_REGION: "eu-north-1"
         run: |
           cd server
-          eb init RedditSentimentAnalysisProject --platform "Python 3.9" --region $AWS_REGION 
-          eb deploy RedditSentimentAnalysisProject-env-1 --label "app-version-${{ github.run_id }}" 
+          zip -r ../app.zip .  # Zip the application code
+          aws elasticbeanstalk create-application-version \
+            --application-name Reddit_Sentiment_Analysis_Project \
+            --version-label "app-version-${{ github.run_id }}" \
+            --source-bundle S3Bucket="elasticbeanstalk-${AWS_REGION}-${AWS_ACCOUNT_ID}",S3Key="app.zip" \
+            --region $AWS_REGION
+
+      # Deploy Backend to Elastic Beanstalk
+      - name: Deploy Backend to AWS Elastic Beanstalk
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: "eu-north-1" 
+        run: |
+          cd server
+          eb init RedditSentimentAnalysisProject --region $AWS_REGION --platform "Python 3.9"
+          eb deploy RedditSentimentAnalysisProject-env-1 --label "app-version-${{ github.run_id }}"
