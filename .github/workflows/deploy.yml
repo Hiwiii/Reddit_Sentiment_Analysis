@@ -68,7 +68,7 @@ jobs:
           cd server
           eb init RedditSentimentAnalysisProject --platform "Python 3.9" --region $AWS_REGION 
           if [ "$env_exists" = "true" ]; then
-            eb deploy RedditSentimentAnalysisProject-env-1 --staged  # Update existing application version
+            eb deploy RedditSentimentAnalysisProject-env-1  # Update existing application version
           else
             eb create RedditSentimentAnalysisProject-env-1 --platform "Python 3.9"  # Create new application environment
           fi
