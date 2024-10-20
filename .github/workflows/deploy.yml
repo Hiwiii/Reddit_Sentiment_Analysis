@@ -39,40 +39,30 @@ jobs:
           docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/reddit-sentiment-backend:latest ./server
           docker push ${{ secrets.DOCKERHUB_USERNAME }}/reddit-sentiment-backend:latest
 
-      # Deploy Backend to Elastic Beanstalk
-      - name: Check if Application Version Exists
-        id: check_version
+      # Check if Application Environment Exists
+      - name: Check if Application Environment Exists
+        id: check_env
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_REGION: "eu-north-1"
         run: |
-          cd server
-          pip install awsebcli  # Install Elastic Beanstalk CLI
-          eb init --region $AWS_REGION --platform "Python 3.9"
-          if eb status RedditSentimentAnalysisProject-env-1 | grep -q "Environment is running"; then
-            echo "Application version exists"
-            echo "exists=true" >> $GITHUB_ENV
+          if aws elasticbeanstalk describe-environments --environment-names RedditSentimentAnalysisProject-env-1 --region $AWS_REGION --no-cli-pager; then
+            echo "env_exists=true" >> $GITHUB_ENV
           else
-            echo "Application version does not exist"
-            echo "exists=false" >> $GITHUB_ENV
+            echo "env_exists=false" >> $GITHUB_ENV
+          fi
 
-      - name: Deploy Application
-        if: env.exists == 'true'
+      # Deploy Application or Create New Environment
+      - name: Deploy or Create Application
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_REGION: "eu-north-1"
         run: |
           cd server
-          eb deploy RedditSentimentAnalysisProject-env-1 --staged  # Update existing application version
-
-      - name: Create and Deploy New Application Version
-        if: env.exists == 'false'
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_REGION: "eu-north-1"
-        run: |
-          cd server
-          eb create RedditSentimentAnalysisProject-env-1 --platform "Python 3.9"  # Create a new application environment
+          if [ "$env_exists" = "true" ]; then
+            eb deploy RedditSentimentAnalysisProject-env-1 --staged  # Update existing application version
+          else
+            eb create RedditSentimentAnalysisProject-env-1 --platform "Python 3.9"  # Create new application environment
+          fi
