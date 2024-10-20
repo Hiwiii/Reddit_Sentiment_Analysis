@@ -39,18 +39,18 @@ jobs:
           docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/reddit-sentiment-backend:latest ./server
           docker push ${{ secrets.DOCKERHUB_USERNAME }}/reddit-sentiment-backend:latest
 
-      # Check if Application Version Exists
-      - name: Check if Application Version Exists
-        id: check_version
+      # Check if Application Environment Exists
+      - name: Check if Application Environment Exists
+        id: check_env
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_REGION: "eu-north-1"
         run: |
-          if aws elasticbeanstalk describe-application-versions --application-name RedditSentimentAnalysisProject --region $AWS_REGION --no-cli-pager | grep -q "No Application Version found"; then
-            echo "version_exists=false" >> $GITHUB_ENV
+          if aws elasticbeanstalk describe-environments --environment-names RedditSentimentAnalysisProject-env-1 --region $AWS_REGION --no-cli-pager; then
+            echo "env_exists=true" >> $GITHUB_ENV
           else
-            echo "version_exists=true" >> $GITHUB_ENV
+            echo "env_exists=false" >> $GITHUB_ENV
           fi
 
       # Install the AWS EB CLI
@@ -58,7 +58,7 @@ jobs:
         run: |
           pip install awsebcli
 
-      # Deploy Application or Create New Application Version
+      # Deploy or Create Application with Consistent Version Label
       - name: Deploy or Create Application
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -67,8 +67,9 @@ jobs:
         run: |
           cd server
           eb init RedditSentimentAnalysisProject --platform "Python 3.9" --region $AWS_REGION 
-          if [ "$version_exists" = "true" ]; then
-            eb deploy RedditSentimentAnalysisProject-env-1 --staged  # Update existing application version
+          VERSION_LABEL="v-$(date +'%Y%m%d-%H%M%S')"  # Create a manual, consistent version label based on timestamp
+          if [ "$env_exists" = "true" ]; then
+            eb deploy RedditSentimentAnalysisProject-env-1 --version $VERSION_LABEL --staged  # Update existing application version with the new label
           else
-            eb create RedditSentimentAnalysisProject-env-1 --platform "Python 3.9"  # Create new application environment
+            eb create RedditSentimentAnalysisProject-env-1 --version $VERSION_LABEL --platform "Python 3.9"  # Create new application environment with the version label
           fi
