@@ -67,8 +67,7 @@ jobs:
           AWS_REGION: "eu-north-1"
         run: |
           cd server
-          eb init RedditSentimentAnalysisProject --platform "Python 3.9" --region $AWS_REGION --keyname "default"
-
+          eb init RedditSentimentAnalysisProject --platform "Python 3.9" --region $AWS_REGION
       # Deploy or Create Application
       - name: Deploy or Create Application
         env:
