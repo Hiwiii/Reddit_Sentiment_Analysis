@@ -33,51 +33,21 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_PASSWORD }}
 
-      # Build and Push Backend Docker Image
+      # Build and Push Backend Image to DockerHub
       - name: Build and Push Backend Docker Image
         run: |
           docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/reddit-sentiment-backend:latest ./server
           docker push ${{ secrets.DOCKERHUB_USERNAME }}/reddit-sentiment-backend:latest
 
-      # Check if Application Environment Exists
-      - name: Check if Application Environment Exists
-        id: check_env
+      # Deploy Backend to Elastic Beanstalk
+      - name: Deploy Backend to AWS Elastic Beanstalk
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_REGION: "eu-north-1"
-        run: |
-          if aws elasticbeanstalk describe-environments --environment-names RedditSentimentAnalysisProject-env-1 --region $AWS_REGION --no-cli-pager; then
-            echo "env_exists=true" >> $GITHUB_ENV
-          else
-            echo "env_exists=false" >> $GITHUB_ENV
-          fi
-
-      # Install the AWS EB CLI
-      - name: Install AWS EB CLI
-        run: |
-          pip install awsebcli
-
-      # Initialize Elastic Beanstalk Environment (only needed for first-time setup)
-      - name: Initialize EB Environment
-        if: ${{ steps.check_env.outputs.env_exists }} == 'false'
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_REGION: "eu-north-1"
+          AWS_REGION: "eu-north-1" 
         run: |
           cd server
-          eb init RedditSentimentAnalysisProject --platform "Python 3.9" --region $AWS_REGION
-      # Deploy or Create Application
-      - name: Deploy or Create Application
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_REGION: "eu-north-1"
-        run: |
-          cd server
-          if [ "${{ steps.check_env.outputs.env_exists }}" = "true" ]; then
-            eb deploy RedditSentimentAnalysisProject-env-1 --label "app-version-${{ github.run_id }}" --staged
-          else
-            eb create RedditSentimentAnalysisProject-env-1 --platform "Python 3.9"
-          fi
+          pip install awsebcli  # Install Elastic Beanstalk CLI
+          # Deploy the changes to the existing environment and application version
+          eb init --region $AWS_REGION --platform "Python 3.9"
+          eb deploy RedditSentimentAnalysisProject-env-1 --staged  # Deploy staged changes to the environment
