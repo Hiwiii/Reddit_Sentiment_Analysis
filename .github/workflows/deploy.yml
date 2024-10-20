@@ -52,7 +52,9 @@ jobs:
           AWS_REGION: "eu-north-1"
         run: |
           cd server
-          zip -r ../app.zip .  # Zip the application code
+          # Create a zip file excluding the venv directory and unnecessary files
+          zip -r ../app.zip . -x "venv/*" "*.git/*" "*.github/*" "*.DS_Store" "*.gitignore" "tests/*"
+          # Upload to Elastic Beanstalk
           aws elasticbeanstalk create-application-version \
             --application-name Reddit_Sentiment_Analysis_Project \
             --version-label "app-version-${{ github.run_id }}" \
@@ -64,7 +66,7 @@ jobs:
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_REGION: "eu-north-1" 
+          AWS_REGION: "eu-north-1"
         run: |
           cd server
           eb init RedditSentimentAnalysisProject --region $AWS_REGION --platform "Python 3.9"
