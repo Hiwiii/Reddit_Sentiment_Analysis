@@ -58,6 +58,17 @@ jobs:
         run: |
           pip install awsebcli
 
+      # Initialize Elastic Beanstalk Environment (only needed for first-time setup)
+      - name: Initialize EB Environment
+        if: ${{ steps.check_env.outputs.env_exists }} == 'false'
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: "eu-north-1"
+        run: |
+          cd server
+          eb init RedditSentimentAnalysisProject --platform "Python 3.9" --region $AWS_REGION --keyname "default"
+
       # Deploy or Create Application
       - name: Deploy or Create Application
         env:
@@ -66,9 +77,8 @@ jobs:
           AWS_REGION: "eu-north-1"
         run: |
           cd server
-          eb init RedditSentimentAnalysisProject --platform "Python 3.9" --region $AWS_REGION 
-          if [ "$env_exists" = "true" ]; then
-            eb deploy RedditSentimentAnalysisProject-env-1  # Deploy new version with auto-generated version label
+          if [ "${{ steps.check_env.outputs.env_exists }}" = "true" ]; then
+            eb deploy RedditSentimentAnalysisProject-env-1 --label "app-version-${{ github.run_id }}" --staged
           else
-            eb create RedditSentimentAnalysisProject-env-1 --platform "Python 3.9"  
+            eb create RedditSentimentAnalysisProject-env-1 --platform "Python 3.9"
           fi
