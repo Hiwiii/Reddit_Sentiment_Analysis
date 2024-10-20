@@ -80,5 +80,5 @@ jobs:
           if [ "$env_exists" = "true" ]; then
             eb deploy RedditSentimentAnalysisProject-env-1 --label "app-version-${{ github.run_id }}" --staged
           else
-            eb create RedditSentimentAnalysisProject-env-1 --platform "Python 3.9"  # Create new environment and deploy
+            eb create RedditSentimentAnalysisProject-env-1 --platform "Python 3.9"  
           fi
