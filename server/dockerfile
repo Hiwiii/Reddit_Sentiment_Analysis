@@ -7,6 +7,12 @@ WORKDIR /app
 # Copy all files from your server directory into the container
 COPY . .
 
+# Set environment variables for Reddit API
+ENV REDDIT_CLIENT_ID="GMSVmAHa0yf5cOuBaSLbOQ"
+ENV REDDIT_SECRET="DH9QcYDeH3B34C-KIZnBvNz974fedw"
+ENV REDDIT_USERNAME="Hiwi_g"
+ENV REDDIT_USER_AGENT="Reddit_Sentiment_App:1.0 (by u/Hiwi_g)"
+
 # Install dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 

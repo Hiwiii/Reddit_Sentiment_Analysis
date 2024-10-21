@@ -17,11 +17,10 @@ services:
       - "5000:5000"
     volumes:
       - ./server:/app
-    environment:
-      - FLASK_ENV=development
-      - MONGO_URI=mongodb://mongodb:27017/reddit_sentiment
+    env_file:
+      - .env.local  # Use .env.local for local development
     depends_on:
-      - mongodb
+      - mongodb  # In local, backend depends on the MongoDB container
 
   mongodb:
     image: mongo:latest
