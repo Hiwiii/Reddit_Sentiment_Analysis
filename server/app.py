@@ -72,7 +72,7 @@ def add_test():
 @app.route("/get_tests", methods=["GET"])
 def get_tests():
     data = list(db.test.find({}, {"_id": 0}))  # Retrieve all documents, hide '_id'
-    print(f"Retrieved data: {data}")  # Log the retrieved data for debugging
+    print(f"Retrieved data: {data}")  
     return jsonify(data), 200
 
 
