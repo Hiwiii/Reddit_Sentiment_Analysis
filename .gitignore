@@ -1,5 +1,8 @@
 tmpnodejsnpm-cache
 venv
+.env.local
+.env.production
+
 # Elastic Beanstalk Files
 .elasticbeanstalk/*
 !.elasticbeanstalk/*.cfg.yml
