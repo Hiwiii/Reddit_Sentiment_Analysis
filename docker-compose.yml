@@ -1,0 +1,59 @@
+# docker-compose.yml
+services:
+  # backend
+  backend:
+    build: ./server
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./server:/app
+    env_file:
+      - .env.local  
+    depends_on:
+      - mongodb
+  # reddit_micro_service
+  reddit_service:
+    build:
+      context: ./server/reddit_service 
+      dockerfile: Dockerfile  
+    ports:
+      - "5001:5001"
+    env_file:
+      - ./server/reddit_service/.env.local  
+    command: ["python", "app.py"]
+    depends_on:
+      - backend
+  # Storage_micro_service 
+  storage_service:
+    build:
+      context: ./server/storage_service
+      dockerfile: Dockerfile
+    ports:
+      - "5002:5002"
+    env_file:
+      - ./server/storage_service/.env.local
+    command: ["python", "app.py"]
+    depends_on:
+      - mongodb
+  # Sentiment_micro_service
+  sentiment_service:
+    build:
+      context: ./server/sentiment_service
+      dockerfile: Dockerfile
+    ports:
+      - "5003:5003"
+    env_file:
+      - ./server/sentiment_service/.env.local
+    command: ["python", "app.py"]
+    depends_on:
+      - mongodb
+  # MongoDB 
+  mongodb:
+    image: mongo:latest
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+
+volumes:
+  mongo-data:

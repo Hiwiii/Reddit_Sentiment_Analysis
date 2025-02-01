@@ -1,0 +1,76 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build_and_deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      # Backend setup
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.9'
+
+      - name: Install backend dependencies
+        run: |
+          cd server
+          python -m venv venv
+          source venv/bin/activate
+          pip install -r requirements.txt
+
+      # DockerHub Authentication Step (For Backend)
+      - name: Log in to DockerHub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_PASSWORD }}
+
+      # Build and Push Backend Image to DockerHub
+      - name: Build and Push Backend Docker Image
+        run: |
+          docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/reddit-sentiment-backend:latest ./server
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/reddit-sentiment-backend:latest
+
+      # Install the AWS EB CLI
+      - name: Install AWS EB CLI
+        run: |
+          pip install awsebcli
+
+      # Create a New Application Version
+      - name: Create a New Application Version
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: "eu-north-1"
+        run: |
+          cd server
+          # Create a zip file excluding the venv directory and unnecessary files
+          zip -r ../app.zip . -x "venv/*" "*.git/*" "*.github/*" "*.DS_Store" "*.gitignore" "tests/*"
+          # Upload to S3
+          aws s3 cp ../app.zip s3://elasticbeanstalk-eu-north-1-600627335166/app.zip
+          # Create application version
+          aws elasticbeanstalk create-application-version \
+            --application-name Reddit_Sentiment_Analysis_Project \
+            --version-label "app-version-${{ github.run_id }}" \
+            --source-bundle S3Bucket="elasticbeanstalk-eu-north-1-600627335166",S3Key="app.zip" \
+            --region $AWS_REGION
+
+      # Deploy Backend to Elastic Beanstalk
+      - name: Deploy Backend to AWS Elastic Beanstalk
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: "eu-north-1"
+          FLASK_ENV: "production"  # Set to production for Elastic Beanstalk
+        run: |
+          cd server
+          eb init RedditSentimentAnalysisProject --region $AWS_REGION --platform "Python 3.9"
+          eb deploy RedditSentimentAnalysisProject-env-1 --label "app-version-${{ github.run_id }}"

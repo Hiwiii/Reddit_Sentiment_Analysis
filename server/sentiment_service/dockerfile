@@ -1,0 +1,13 @@
+# Step 1: Create a custom base image
+FROM python:3.9-slim as base
+
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Step 2: Use the custom base image for your actual service
+FROM base
+WORKDIR /app
+COPY . .
+EXPOSE 5003
+CMD ["python", "app.py"]
