@@ -1,29 +1,57 @@
-# docker-compose.yml
+version: "3.8"
+
+networks:
+  app-network:
+
+volumes:
+  mongo-data:
+
 services:
-  # backend
+  mongodb:
+    image: mongo:latest
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.runCommand({ ping: 1 })"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app-network
+
   backend:
     build: ./server
     ports:
-      - "5000:5000"
+      - "7500:7500"
     volumes:
       - ./server:/app
     env_file:
-      - .env.local  
+      - .env.local
     depends_on:
-      - mongodb
-  # reddit_micro_service
+      mongodb:
+        condition: service_healthy
+    networks:
+      - app-network
+    restart: unless-stopped
+
   reddit_service:
     build:
-      context: ./server/reddit_service 
-      dockerfile: Dockerfile  
+      context: ./server/reddit_service
+      dockerfile: Dockerfile
     ports:
-      - "5001:5001"
+      - "5005:5005"
     env_file:
-      - ./server/reddit_service/.env.local  
-    command: ["python", "app.py"]
+      - ./server/reddit_service/.env.local
+    command: ["python", "-u", "app.py"]
     depends_on:
-      - backend
-  # Storage_micro_service 
+      mongodb:
+        condition: service_healthy
+    networks:
+      - app-network
+    restart: unless-stopped
+
   storage_service:
     build:
       context: ./server/storage_service
@@ -34,8 +62,12 @@ services:
       - ./server/storage_service/.env.local
     command: ["python", "app.py"]
     depends_on:
-      - mongodb
-  # Sentiment_micro_service
+      mongodb:
+        condition: service_healthy
+    networks:
+      - app-network
+    restart: unless-stopped
+
   sentiment_service:
     build:
       context: ./server/sentiment_service
@@ -46,14 +78,8 @@ services:
       - ./server/sentiment_service/.env.local
     command: ["python", "app.py"]
     depends_on:
-      - mongodb
-  # MongoDB 
-  mongodb:
-    image: mongo:latest
-    ports:
-      - "27017:27017"
-    volumes:
-      - mongo-data:/data/db
-
-volumes:
-  mongo-data:
+      mongodb:
+        condition: service_healthy
+    networks:
+      - app-network
+    restart: unless-stopped
