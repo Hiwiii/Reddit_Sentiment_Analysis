@@ -13,64 +13,85 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
-      # Backend setup
-      - name: Set up Python
-        uses: actions/setup-python@v2
-        with:
-          python-version: '3.9'
-
-      - name: Install backend dependencies
-        run: |
-          cd server
-          python -m venv venv
-          source venv/bin/activate
-          pip install -r requirements.txt
-
-      # DockerHub Authentication Step (For Backend)
+      # ---------- (Optional) Build & push a Docker image for other uses ----------
       - name: Log in to DockerHub
         uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_PASSWORD }}
 
-      # Build and Push Backend Image to DockerHub
       - name: Build and Push Backend Docker Image
         run: |
           docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/reddit-sentiment-backend:latest ./server
           docker push ${{ secrets.DOCKERHUB_USERNAME }}/reddit-sentiment-backend:latest
 
-      # Install the AWS EB CLI
+      # ---------- EB CLI ----------
       - name: Install AWS EB CLI
-        run: |
-          pip install awsebcli
+        run: pip install awsebcli
 
-      # Create a New Application Version
+      # ---------- Package server/ as the EB bundle ----------
+      - name: Create EB application bundle from server/
+        env:
+          AWS_REGION: "eu-north-1"
+        run: |
+          set -e
+          cd server
+
+          # Ensure Unix line endings for Procfile (avoids rare CRLF issues)
+          if [ -f Procfile ]; then
+            perl -pi -e 's/\r$//' Procfile
+          fi
+
+          # Create zip at repo root
+          zip -r ../app.zip . \
+            -x "venv/*" "*.git/*" "*.github/*" "*.DS_Store" "*.gitignore" "tests/*" "__pycache__/*" ".pytest_cache/*"
+
+          echo "---- ZIP CONTENTS (expect Procfile, app.py, requirements.txt at zip root) ----"
+          unzip -l ../app.zip | sed -n '1,200p'
+
+      # ---------- Upload to S3 & create EB application version ----------
       - name: Create a New Application Version
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_REGION: "eu-north-1"
         run: |
-          cd server
-          # Create a zip file excluding the venv directory and unnecessary files
-          zip -r ../app.zip . -x "venv/*" "*.git/*" "*.github/*" "*.DS_Store" "*.gitignore" "tests/*"
-          # Upload to S3
-          aws s3 cp ../app.zip s3://elasticbeanstalk-eu-north-1-600627335166/app.zip
-          # Create application version
+          set -e
+          aws s3 cp app.zip s3://elasticbeanstalk-eu-north-1-600627335166/app.zip
           aws elasticbeanstalk create-application-version \
             --application-name Reddit_Sentiment_Analysis_Project \
             --version-label "app-version-${{ github.run_id }}" \
             --source-bundle S3Bucket="elasticbeanstalk-eu-north-1-600627335166",S3Key="app.zip" \
             --region $AWS_REGION
 
-      # Deploy Backend to Elastic Beanstalk
+      # ---------- Deploy to EB; on failure, fetch logs ----------
       - name: Deploy Backend to AWS Elastic Beanstalk
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_REGION: "eu-north-1"
-          FLASK_ENV: "production"  # Set to production for Elastic Beanstalk
         run: |
+          set -e
           cd server
-          eb init RedditSentimentAnalysisProject --region $AWS_REGION --platform "Python 3.9"
+
+          # Initialize to the same platform family as your EB env (update if your env uses another runtime)
+          eb init RedditSentimentAnalysisProject --region $AWS_REGION --platform "Python 3.12"
+
+          # Deploy this newly created version label
+          set +e
           eb deploy RedditSentimentAnalysisProject-env-1 --label "app-version-${{ github.run_id }}"
+          DEPLOY_RC=$?
+          set -e
+
+          if [ $DEPLOY_RC -ne 0 ]; then
+            echo "Deploy failed, fetching tail logs..."
+            aws elasticbeanstalk request-environment-info \
+              --environment-name RedditSentimentAnalysisProject-env-1 \
+              --info-type tail --region $AWS_REGION
+            sleep 12
+            aws elasticbeanstalk retrieve-environment-info \
+              --environment-name RedditSentimentAnalysisProject-env-1 \
+              --info-type tail --region $AWS_REGION \
+              --query 'EnvironmentInfo[0].Message' --output text || true
+            exit $DEPLOY_RC
+          fi
