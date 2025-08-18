@@ -1,65 +1,67 @@
-from flask import Flask, jsonify, request
-from mongoengine import Document, StringField, connect
-from dotenv import load_dotenv
+from flask import Flask, request, jsonify
 import os
+from mongoengine import Document, StringField, IntField, BooleanField, DateTimeField
+from dotenv import load_dotenv
+import database  # ✅ Import database.py to handle the MongoDB connection
+from datetime import datetime
+
+# Load environment variables
+load_dotenv(os.path.join(os.path.dirname(__file__), ".env.production" if os.getenv("FLASK_ENV") == "production" else ".env.local"))
 
 app = Flask(__name__)
 
-# ✅ Load Environment Variables
-load_dotenv(".env.production" if os.getenv("FLASK_ENV") == "production" else ".env.local")
-MONGO_URI = os.getenv("MONGODB_URI")
+# ✅ Define the Post document model
+class Post(Document):
+    post_id = StringField(required=True, unique=True)
+    title = StringField()
+    author = StringField()
+    subreddit = StringField()
+    score = IntField()
+    num_comments = IntField()
+    created_utc = DateTimeField()
+    url = StringField()
+    is_video = BooleanField()
 
-# ✅ Connect to MongoDB
-connect(db="reddit_sentiment", host=MONGO_URI, alias="default")
-
-# ✅ Define MongoDB Collection Schema
-class TestData(Document):
-    title = StringField(required=True)
-    body = StringField()
-
-# ✅ Insert Test Data on Startup (If DB is empty)
-if TestData.objects.count() == 0:
-    TestData(title="Startup Test Post", body="Testing MongoDB Connection").save()
-    print("✅ MongoDB is connected, and test data is inserted.")
-
-# ✅ Function to Store a New Post (REPLACE YOUR EXISTING FUNCTION)
-def store_post(data):
-    """Store Reddit post data in MongoDB."""
+@app.route("/store-posts", methods=["POST"])
+def store_posts():
     try:
-        post = TestData(title=data.get("title"), body=data.get("body"))
-        post.save()
-        print(f"✅ New post inserted: {post.title}")  # Debugging log
-        return str(post.id)  # Return MongoDB Object ID as a string
-    except Exception as e:
-        print(f"❌ Error inserting post: {str(e)}")
-        return None
-
-# ✅ API Route to Store Reddit Posts
-@app.route("/store", methods=["POST"])
-def store_data():
-    """Store Reddit posts into MongoDB."""
-    try:
-        data = request.get_json()
+        data = request.json
         if not data:
             return jsonify({"error": "No data provided"}), 400
 
-        result = store_post(data)
-        if result:
-            return jsonify({"message": "Data stored!", "id": result}), 201
-        else:
-            return jsonify({"error": "Failed to store data"}), 500
+        # ✅ Insert posts into MongoDB
+        for category, subreddits in data.items():
+            for subreddit, posts in subreddits.items():
+                for post in posts.get("data", {}).get("children", []):
+                    post_data = post["data"]
+
+                    from datetime import datetime
+                    created_utc = post_data.get("created_utc")
+                    created_utc_dt = datetime.utcfromtimestamp(created_utc) if created_utc else None
+
+                    Post.objects(post_id=post_data["id"]).update_one(
+                        set__title=post_data.get("title"),
+                        set__author=post_data.get("author"),
+                        set__subreddit=post_data.get("subreddit"),
+                        set__score=post_data.get("score"),
+                        set__num_comments=post_data.get("num_comments"),
+                        set__created_utc=created_utc_dt,
+                        set__url=post_data.get("url"),
+                        set__is_video=post_data.get("is_video"),
+                        upsert=True
+                    )
+
+        return jsonify({"message": "Posts stored successfully!"}), 201
 
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        print(f"❌ Error storing posts: {e}")
+        return jsonify({"error": "Failed to store posts", "details": str(e)}), 500
 
-# ✅ API Route to Test MongoDB Connection
-@app.route("/test-db-connection", methods=["GET"])
-def test_db_connection():
-    try:
-        collections = connect().list_collection_names()
-        return jsonify({"message": "MongoDB connection successful!", "collections": collections}), 200
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+
+@app.route("/ping", methods=["GET"])
+def ping():
+    """Health check endpoint"""
+    return jsonify({"message": "Storage Service Pong!"}), 200
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5002, debug=True)
+    app.run(host="0.0.0.0", port=5006, debug=True)

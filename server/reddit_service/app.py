@@ -1,5 +1,5 @@
 from flask import Flask, jsonify, request, redirect
-from reddit_api import make_authenticated_request
+from reddit_api import make_authenticated_request, fetch_all_subreddits
 from dotenv import load_dotenv, set_key
 import random
 import string
@@ -36,7 +36,6 @@ def authorize():
         f"redirect_uri={REDIRECT_URI}&duration=permanent&scope=read"
     )
     return redirect(auth_url)
-
 
 
 @app.route("/callback")
@@ -86,11 +85,18 @@ def callback():
 def get_reddit_posts():
     """Fetch top posts from a given subreddit."""
     subreddit = request.args.get("subreddit", "python")
-    limit = request.args.get("limit", 5)
+    limit = request.args.get("limit", 20)
 
     url = f"https://oauth.reddit.com/r/{subreddit}/top?limit={limit}"
     posts = make_authenticated_request(url)
 
+    return jsonify(posts), 200
+
+
+@app.route("/fetch-all", methods=["GET"])
+def fetch_all():
+    """Fetch top posts from all predefined subreddits."""
+    posts = fetch_all_subreddits()
     return jsonify(posts), 200
 
 
@@ -101,4 +107,4 @@ def ping():
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5005, debug=True)
+    app.run(host="0.0.0.0", port=5008, debug=True)

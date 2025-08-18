@@ -41,10 +41,10 @@ services:
       context: ./server/reddit_service
       dockerfile: Dockerfile
     ports:
-      - "5005:5005"
+      - "5008:5008"
     env_file:
       - ./server/reddit_service/.env.local
-    command: ["python", "-u", "app.py"]
+    command: ["python", "app.py"]
     depends_on:
       mongodb:
         condition: service_healthy

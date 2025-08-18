@@ -1,28 +1,23 @@
 from flask import Flask, request, jsonify
-from storage_service import store_post
-from dotenv import load_dotenv
+from storage_service import store_posts  
 import os
+import database  
+from dotenv import load_dotenv  
 
-environment = os.getenv("FLASK_ENV", "development")
-load_dotenv(".env.production" if environment == "production" else ".env.local")
+# Load environment variables
+load_dotenv(os.path.join(os.path.dirname(__file__), ".env.production" if os.getenv("FLASK_ENV") == "production" else ".env.local"))
 
 app = Flask(__name__)
 
+@app.route("/store-posts", methods=["POST"])
+def store_reddit_posts():
+    """Endpoint to store Reddit posts in MongoDB."""
+    return store_posts()
 
-@app.route("/store", methods=["POST"])
-def store_data():
-    """Store Reddit posts into MongoDB."""
-    try:
-        data = request.get_json()
-        if not data:
-            return jsonify({"error": "No data provided"}), 400
-
-        result = store_post(data)
-        return jsonify({"message": "Data stored!", "id": str(result)}), 201
-
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
+@app.route("/ping", methods=["GET"])
+def ping():
+    """Health check endpoint."""
+    return jsonify({"message": "Storage Service Pong!"}), 200
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5002, debug=True)
