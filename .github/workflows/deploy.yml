@@ -54,6 +54,7 @@ jobs:
           cd server
           # Create a zip file excluding the venv directory and unnecessary files
           zip -r ../app.zip . -x "venv/*" "*.git/*" "*.github/*" "*.DS_Store" "*.gitignore" "tests/*"
+          unzip -l ../app.zip | sed -n '1,200p' 
           # Upload to S3
           aws s3 cp ../app.zip s3://elasticbeanstalk-eu-north-1-600627335166/app.zip
           # Create application version
