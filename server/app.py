@@ -7,7 +7,7 @@ environment = os.getenv("FLASK_ENV", "development")
 load_dotenv(".env.production" if environment == "production" else ".env.local")
 
 app = Flask(__name__)
-
+application = app
 
 # Test route to check if the API is working
 @app.route("/")
