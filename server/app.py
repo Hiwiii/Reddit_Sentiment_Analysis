@@ -7,18 +7,19 @@ environment = os.getenv("FLASK_ENV", "development")
 load_dotenv(".env.production" if environment == "production" else ".env.local")
 
 app = Flask(__name__)
-application = app
 
-# Test route to check if the API is working
-@app.route("/")
+# Root route
+@app.route("/", methods=["GET"])
 def home():
-    return "Hello, Reddit Sentiment Analysis!"
-
+    return jsonify(
+        status="ok",
+        message="Reddit Sentiment Analysis API is running ✅",
+        env=environment
+    )
 
 @app.route("/ping", methods=["GET"])
 def ping():
-    return jsonify({"message": "Pong!"}), 200
-
+    return jsonify({"message": "pong"}), 200
 
 if __name__ == "__main__":
     debug_mode = environment != "production"
