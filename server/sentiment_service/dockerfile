@@ -1,5 +1,5 @@
 # Step 1: Create a custom base image
-FROM python:3.9-slim as base
+FROM python:3.11-slim as base
 
 WORKDIR /app
 COPY requirements.txt .
