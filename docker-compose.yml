@@ -78,6 +78,8 @@ services:
       - ./server/sentiment_service/.env.local
     command: ["python", "app.py"]
     depends_on:
+      storage_service:
+        condition: service_started
       mongodb:
         condition: service_healthy
     networks:

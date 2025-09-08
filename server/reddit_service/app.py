@@ -11,6 +11,7 @@ environment = os.getenv("FLASK_ENV", "development")
 env_file = ".env.production" if environment == "production" else ".env.local"
 load_dotenv(env_file)
 
+STORAGE_SERVICE_URL = os.getenv("STORAGE_SERVICE_URL")
 CLIENT_ID = os.getenv("CLIENT_ID")
 CLIENT_SECRET = os.getenv("CLIENT_SECRET")
 REDIRECT_URI = os.getenv("REDIRECT_URI")
@@ -83,14 +84,26 @@ def callback():
 
 @app.route("/reddit-posts", methods=["GET"])
 def get_reddit_posts():
-    """Fetch top posts from a given subreddit."""
+    """Fetch top posts from a given subreddit and persist them via storage_service."""
     subreddit = request.args.get("subreddit", "python")
     limit = request.args.get("limit", 20)
 
     url = f"https://oauth.reddit.com/r/{subreddit}/top?limit={limit}"
-    posts = make_authenticated_request(url)
+    posts = make_authenticated_request(url)  # Reddit API response (Listing)
 
-    return jsonify(posts), 200
+    # --- NEW: forward to storage_service for persistence ---
+    stored = None
+    if STORAGE_SERVICE_URL:
+        try:
+            r = requests.post(STORAGE_SERVICE_URL, json=posts, timeout=10)
+            r.raise_for_status()
+            stored = r.json()
+        except Exception as e:
+            # Don't fail the fetch just because storing failed
+            print(f"❌ Failed to store posts via storage_service: {e}")
+    # -------------------------------------------------------
+
+    return jsonify({"data": posts, "store_result": stored}), 200
 
 
 @app.route("/fetch-all", methods=["GET"])
