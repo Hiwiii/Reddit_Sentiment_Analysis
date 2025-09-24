@@ -8,8 +8,8 @@ load_dotenv(os.path.join(
     ".env.production" if os.getenv("FLASK_ENV") == "production" else ".env.local"
 ))
 
-import database  # establishes Mongo connection via MONGODB_URI
-from storage_service import (
+from .import database  # establishes Mongo connection via MONGODB_URI
+from .storage_service import (
     Post,
     upsert_posts,
     get_recent_posts,
@@ -17,6 +17,10 @@ from storage_service import (
 )
 
 app = Flask(__name__)
+
+@app.route("/")
+def root():
+    return jsonify({"ok": True})
 
 @app.route("/ping", methods=["GET"])
 def ping():
@@ -77,4 +81,5 @@ def store_sentiment():
         return jsonify({"error": "Failed to store sentiment", "details": str(e)}), 500
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5002, debug=True)
+    import os
+    app.run(host="0.0.0.0", port=int(os.getenv("PORT", "5000")), debug=True)

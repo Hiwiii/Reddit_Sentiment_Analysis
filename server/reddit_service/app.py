@@ -1,5 +1,5 @@
 from flask import Flask, jsonify, request, redirect
-from reddit_api import make_authenticated_request, fetch_all_subreddits
+from .reddit_api import make_authenticated_request, fetch_all_subreddits
 from dotenv import load_dotenv, set_key
 import random
 import string
@@ -24,6 +24,9 @@ REFRESH_TOKEN = os.getenv("REFRESH_TOKEN")
 
 app = Flask(__name__)
 
+@app.route("/")
+def root():
+    return jsonify({"ok": True})
 # Generate a random state string
 STATE = "".join(random.choices(string.ascii_letters + string.digits, k=16))
 
@@ -120,4 +123,5 @@ def ping():
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5008, debug=True)
+    import os
+    app.run(host="0.0.0.0", port=int(os.getenv("PORT", "5000")), debug=True)

@@ -3,3 +3,4 @@ python-dotenv==1.0.1
 nltk==3.8.1
 mongoengine==0.29.1
 requests==2.32.3
+gunicorn==23.0.0

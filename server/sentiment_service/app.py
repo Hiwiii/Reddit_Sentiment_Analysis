@@ -3,12 +3,16 @@ from dotenv import load_dotenv
 import os
 
 # ✅ import the local file directly
-from logic import analyze_posts, quick_db_check
+from .logic import analyze_posts, quick_db_check
 
 environment = os.getenv("FLASK_ENV", "development")
 load_dotenv(".env.production" if environment == "production" else ".env.local")
 
 app = Flask(__name__)
+
+@app.route("/")
+def root():
+    return jsonify({"ok": True})
 
 @app.route("/ping", methods=["GET"])
 def ping():
@@ -26,4 +30,5 @@ def get_sentiment_analysis():
         return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5003, debug=True)
+    import os
+    app.run(host="0.0.0.0", port=int(os.getenv("PORT", "5000")), debug=True)
