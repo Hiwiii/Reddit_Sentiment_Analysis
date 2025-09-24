@@ -22,7 +22,7 @@ def health():
 
 # IMPORTANT: Elastic Beanstalk looks for a WSGI callable named `application`
 # Mount each service under a path prefix
-application = DispatcherMiddleware(_root, {
+app = DispatcherMiddleware(_root, {
     "/reddit": reddit_app,
     "/sentiment": sentiment_app,
     "/storage": storage_app,
