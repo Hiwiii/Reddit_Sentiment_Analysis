@@ -1,19 +1,31 @@
-from mongoengine import connect
-from dotenv import load_dotenv
+# server/storage_service/database.py
 import os
+from mongoengine import connect
 
-# Pick the right env file
-env_file = os.path.join(
-    os.path.dirname(__file__),
-    ".env.production" if os.getenv("FLASK_ENV") == "production" else ".env.local"
-)
-load_dotenv(env_file)
+_conn = None
 
-# Read the full URI from env
-MONGODB_URI = os.getenv("MONGODB_URI")
+def init_db():
+    """Connect lazily; never crash Gunicorn on failure."""
+    global _conn
+    if _conn:
+        return _conn
 
-if not MONGODB_URI:
-    raise ValueError("❌ MONGODB_URI not found in environment variables")
+    uri = os.getenv("MONGODB_URI")
+    if not uri:
+        print("⚠️  MONGODB_URI not set; starting without DB", flush=True)
+        return None
 
-# ✅ Let MongoEngine parse db name from the URI automatically
-connect(host=MONGODB_URI, alias="default")
+    try:
+        _conn = connect(
+            host=uri,
+            alias="default",
+            tls=True,                          # fine for Atlas SRV URIs
+            serverSelectionTimeoutMS=5000,     # fail fast on bad network
+        )
+        # Ping to log a clear success/failure
+        _conn.admin.command("ping")
+        print("✅ MongoDB connected", flush=True)
+    except Exception as e:
+        print(f"❌ MongoDB init failed: {e}", flush=True)
+        _conn = None
+    return _conn
