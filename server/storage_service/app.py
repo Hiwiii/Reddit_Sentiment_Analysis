@@ -2,7 +2,8 @@
 import os
 from flask import Flask, request, jsonify
 
-from .database import init_db
+# DO NOT import init_db or use before_first_request.
+# __init__.py already called _db.init_db() when the package was imported.
 from .storage_service import (
     Post,
     upsert_posts,
@@ -11,14 +12,6 @@ from .storage_service import (
 )
 
 app = Flask(__name__)
-
-# Connect to Mongo once the app is up (non-fatal; logs errors)
-@app.before_first_request
-def _connect_db():
-    try:
-        init_db()
-    except Exception as e:
-        print(f"⚠️ DB init warning: {e}", flush=True)
 
 @app.route("/")
 def root():
@@ -83,5 +76,4 @@ def store_sentiment():
         return jsonify({"error": "Failed to store sentiment", "details": str(e)}), 500
 
 if __name__ == "__main__":
-    # For occasional standalone runs, set envs in your shell or export from .env file
     app.run(host="0.0.0.0", port=int(os.getenv("PORT", "5000")), debug=True)

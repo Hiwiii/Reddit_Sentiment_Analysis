@@ -11,7 +11,7 @@ from mongoengine import (
     FloatField,
 )
 
-from . import database   # ensures Mongo connection is established
+from . import database as _db  # ensures Mongo connection is established
 
 class Post(Document):
     # Core Reddit fields
