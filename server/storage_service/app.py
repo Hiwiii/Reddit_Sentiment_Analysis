@@ -2,8 +2,7 @@
 import os
 from flask import Flask, request, jsonify
 
-# DO NOT import init_db or use before_first_request.
-# __init__.py already called _db.init_db() when the package was imported.
+from .database import init_db
 from .storage_service import (
     Post,
     upsert_posts,
@@ -12,6 +11,12 @@ from .storage_service import (
 )
 
 app = Flask(__name__)
+
+# Initialize MongoDB once when the module loads (idempotent + non-fatal).
+try:
+    init_db()
+except Exception as e:
+    print(f"⚠️ DB init warning: {e}", flush=True)
 
 @app.route("/")
 def root():
