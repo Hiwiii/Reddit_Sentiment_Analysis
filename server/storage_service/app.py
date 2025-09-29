@@ -1,6 +1,8 @@
 # server/storage_service/app.py
 import os
 from flask import Flask, request, jsonify
+from datetime import datetime, timedelta
+
 
 from .database import init_db
 from .storage_service import (
@@ -82,3 +84,62 @@ def store_sentiment():
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.getenv("PORT", "5000")), debug=True)
+
+@app.route("/summary", methods=["GET"])
+def summary():
+    """
+    Quick snapshot:
+      - counts by polarity (positive/neutral/negative)
+      - total/analyzed/pending
+      - average VADER compound
+    Optional filters:
+      ?subreddit=<name>&hours=<lookback_hours>
+    """
+    try:
+        subreddit = request.args.get("subreddit")
+        hours_str = request.args.get("hours")
+
+        q = Post.objects
+        if subreddit:
+            q = q.filter(subreddit__iexact=subreddit)
+
+        lookback_hours = None
+        if hours_str:
+            try:
+                lookback_hours = int(hours_str)
+                since = datetime.utcnow() - timedelta(hours=lookback_hours)
+                q = q.filter(created_utc__gte=since)
+            except Exception:
+                lookback_hours = None  # ignore bad value
+
+        total = q.count()
+        analyzed_q = q.filter(sentiment_compound__exists=True)
+        analyzed = analyzed_q.count()
+        pending = q.filter(sentiment_polarity__exists=False).count()
+
+        by_polarity = {
+            "positive": q.filter(sentiment_polarity="positive").count(),
+            "neutral":  q.filter(sentiment_polarity="neutral").count(),
+            "negative": q.filter(sentiment_polarity="negative").count(),
+        }
+
+        compounds = [
+            p.sentiment_compound
+            for p in analyzed_q.only("sentiment_compound")
+            if p.sentiment_compound is not None
+        ]
+        avg_compound = (sum(compounds) / len(compounds)) if compounds else None
+
+        return jsonify({
+            "filters": {"subreddit": subreddit, "hours": lookback_hours},
+            "counts": {
+                "total": total,
+                "analyzed": analyzed,
+                "pending": pending,
+                "by_polarity": by_polarity,
+            },
+            "average_compound": avg_compound,
+        }), 200
+    except Exception as e:
+        print(f"❌ Error building summary: {e}", flush=True)
+        return jsonify({"error": "Failed to build summary", "details": str(e)}), 500
