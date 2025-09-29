@@ -10,7 +10,14 @@ try:
 except Exception:
     from nltk.sentiment.vader import SentimentIntensityAnalyzer  # type: ignore
 
-STORAGE_URL = os.getenv("STORAGE_SERVICE_URL", "http://storage_service:5002")
+# Storage service base:
+#   • EB (single env):  STORAGE_BASE_URL=http://127.0.0.1:8000/storage
+#   • Public domain:    STORAGE_BASE_URL=http://<your-eb-domain>/storage
+#   • Local/Docker:     defaults to http://storage_service:5002
+STORAGE_BASE = os.getenv("STORAGE_BASE_URL", "http://storage_service:5002")
+def _url(path: str) -> str:
+    return f"{STORAGE_BASE.rstrip('/')}/{path.lstrip('/')}"
+
 BATCH_SIZE = int(os.getenv("SENTIMENT_BATCH_SIZE", "50"))
 
 _sia = None
@@ -28,7 +35,7 @@ def _get_sia() -> SentimentIntensityAnalyzer:
 def quick_db_check():
     """Used by /ping to verify storage_service is reachable."""
     try:
-        r = requests.get(f"{STORAGE_URL}/posts/recent", params={"limit": 1}, timeout=5)
+        r = requests.get(_url("/posts/recent"), params={"limit": 1}, timeout=5)
         if not r.ok:
             return False, 0
         data = r.json()
@@ -52,7 +59,7 @@ def analyze_posts(limit: int = 20, subreddit: str | None = None):
         params = {"limit": limit}
         if subreddit:
             params["subreddit"] = subreddit
-        r = requests.get(f"{STORAGE_URL}/posts/recent", params=params, timeout=20)
+        r = requests.get(_url("/posts/recent"), params=params, timeout=20)
         r.raise_for_status()
         posts = r.json() or []
     except Exception as e:
@@ -85,7 +92,7 @@ def analyze_posts(limit: int = 20, subreddit: str | None = None):
     # 3) Store back
     store = None
     try:
-        rr = requests.post(f"{STORAGE_URL}/store-sentiment",
+        rr = requests.post(_url("/store-sentiment"),
                            json={"results": results}, timeout=20)
         rr.raise_for_status()
         store = rr.json()

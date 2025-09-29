@@ -14,12 +14,16 @@ ACCESS_TOKEN = os.getenv("ACCESS_TOKEN")
 REFRESH_TOKEN = os.getenv("REFRESH_TOKEN")
 TOKEN_URL = "https://www.reddit.com/api/v1/access_token"
 
-# If you run reddit_service outside Docker/EB, override via env:
-#   STORAGE_SERVICE_URL=http://localhost:5002/store-posts
-STORAGE_SERVICE_URL = os.getenv(
-    "STORAGE_SERVICE_URL",
-    "http://storage_service:5002/store-posts"
-)
+# Storage service base:
+#   • EB (single env):  STORAGE_BASE_URL=http://127.0.0.1:8000/storage
+#   • Public domain:    STORAGE_BASE_URL=http://<your-eb-domain>/storage
+#   • Local/Docker:     defaults to http://storage_service:5002
+STORAGE_BASE = os.getenv("STORAGE_BASE_URL", "http://storage_service:5002")
+
+def _svc_url(path: str) -> str:
+    return f"{STORAGE_BASE.rstrip('/')}/{path.lstrip('/')}"
+
+STORE_POSTS_URL = _svc_url("/store-posts")
 
 # ──────────────────────────────────────────────────────────────────────────────
 # subreddits.json loader (robust; won’t crash if missing)
@@ -28,11 +32,6 @@ def _load_subreddit_catalog():
     """
     Locate and parse subreddits JSON from common places, but never crash if it's
     missing. Always return {category: [subreddit, ...]}.
-
-    Supported schemas:
-      - {"catA": ["python", ...], "catB": ["datascience", ...]}
-      - {"subreddits": ["python", "programming", ...]}
-      - ["python", "programming", ...]
     """
     here = Path(__file__).resolve().parent
 
@@ -42,8 +41,8 @@ def _load_subreddit_catalog():
         candidates.append(Path(override))
 
     candidates += [
-        here / "config" / "subreddits.json",   # reddit_service/config/subreddits.json
-        here.parent / "config" / "subreddits.json",  # server/config/subreddits.json
+        here / "config" / "subreddits.json",                # reddit_service/config/subreddits.json
+        here.parent / "config" / "subreddits.json",         # server/config/subreddits.json
         Path.cwd() / "config" / "subreddits.json",
     ]
 
@@ -176,8 +175,8 @@ def fetch_top_posts(subreddit, limit=20):
 def send_to_storage_service(data):
     """Send fetched posts to the storage service (non-fatal on failure)."""
     try:
-        print(f"📤 Sending data to storage service at {STORAGE_SERVICE_URL} ...")
-        r = requests.post(STORAGE_SERVICE_URL, json=data, timeout=30)
+        print(f"📤 Sending data to storage service at {STORE_POSTS_URL} ...")
+        r = requests.post(STORE_POSTS_URL, json=data, timeout=30)
         if r.status_code in (200, 201):
             print("🚀 Successfully stored posts in storage service!")
         else:
